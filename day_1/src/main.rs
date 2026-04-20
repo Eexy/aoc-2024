@@ -1,4 +1,5 @@
 use std::{
+    collections::HashMap,
     fs::File,
     io::{BufRead, BufReader},
     process,
@@ -33,6 +34,32 @@ fn part_1(reader: impl BufRead) -> i32 {
     l_list.iter().zip(&r_list).map(|(a, b)| (b - a).abs()).sum()
 }
 
+fn part_2(reader: impl BufRead) -> i32 {
+    let mut map = HashMap::new();
+
+    let mut l_list = vec![];
+    for line in reader.lines() {
+        let line = match line {
+            Ok(l) => l,
+            Err(err) => {
+                eprintln!("unable to read line: {err}");
+                process::exit(1);
+            }
+        };
+
+        let mut parsed = line
+            .split_whitespace()
+            .map(|value| value.parse::<i32>().unwrap());
+
+        if let (Some(l_value), Some(r_value)) = (parsed.next(), parsed.next()) {
+            l_list.push(l_value);
+            map.entry(r_value).and_modify(|e| *e += 1).or_insert(1);
+        }
+    }
+
+    l_list.iter().map(|a| a * map.get(a).unwrap_or(&0)).sum()
+}
+
 fn main() {
     let file = match File::open("input.txt") {
         Ok(file) => file,
@@ -44,5 +71,5 @@ fn main() {
 
     let reader = BufReader::new(file);
 
-    dbg!(part_1(reader));
+    dbg!(part_2(reader));
 }
