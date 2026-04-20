@@ -4,16 +4,7 @@ use std::{
     process,
 };
 
-fn main() {
-    let file = match File::open("input.txt") {
-        Ok(file) => file,
-        Err(err) => {
-            eprintln!("unable to read file: {err}");
-            process::exit(1);
-        }
-    };
-
-    let reader = BufReader::new(file);
+fn part_1(reader: impl BufRead) -> i32 {
     let mut l_list = vec![];
     let mut r_list = vec![];
 
@@ -39,7 +30,19 @@ fn main() {
     l_list.sort();
     r_list.sort();
 
-    let difference: i32 = l_list.iter().zip(&r_list).map(|(a, b)| (b - a).abs()).sum();
+    l_list.iter().zip(&r_list).map(|(a, b)| (b - a).abs()).sum()
+}
 
-    dbg!(difference);
+fn main() {
+    let file = match File::open("input.txt") {
+        Ok(file) => file,
+        Err(err) => {
+            eprintln!("unable to read file: {err}");
+            process::exit(1);
+        }
+    };
+
+    let reader = BufReader::new(file);
+
+    dbg!(part_1(reader));
 }
