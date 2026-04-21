@@ -4,45 +4,34 @@ use std::{
     process,
 };
 
-fn part_1(reader: impl BufRead) -> i32 {
-    let mut total = 0;
-    for line in reader.lines() {
-        let result = match line {
-            Ok(content) => content
-                .split_whitespace()
-                .map(|v| v.parse::<i32>().unwrap())
-                .collect::<Vec<_>>(),
-            Err(e) => {
-                eprintln!("unable to read line {e}");
-                process::exit(1);
-            }
-        };
+fn part_1(reader: impl BufRead) -> usize {
+    let result = reader
+        .lines()
+        .filter_map(|line| line.ok())
+        .map(|line| {
+            line.split_whitespace()
+                .map(|value| value.parse::<i32>().unwrap())
+                .collect::<Vec<_>>()
+        })
+        .filter(|levels| !levels.is_empty())
+        .filter(|levels| {
+            let is_increasing = levels[0] < levels[1];
+            levels.windows(2).all(|w| {
+                let diff = (w[0] - w[1]).abs();
+                let is_valid = if is_increasing {
+                    w[0] < w[1]
+                } else {
+                    w[0] > w[1]
+                };
 
-        if result.len() > 1 && result[0] != result[1] {
-            let is_increasing = result[0] < result[1];
-            let mut is_valid = true;
-            for i in 1..result.len() {
-                let difference = (result[i] - result[i - 1]).abs();
-                if is_increasing
-                    && (result[i] <= result[i - 1] || (difference < 1 || difference > 3))
-                {
-                    is_valid = false;
-                } else if !is_increasing
-                    && (result[i] > result[i - 1] || (difference < 1 || difference > 3))
-                {
-                    is_valid = false;
-                }
-            }
+                diff > 0 && diff < 4 && is_valid
+            })
+        })
+        .count();
 
-            if is_valid {
-                total = total + 1;
-            }
-        } else if result.len() == 1 {
-            total = total + 1;
-        }
-    }
+    // dbg!(&result);
 
-    total
+    result
 }
 
 fn main() {
