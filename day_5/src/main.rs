@@ -6,16 +6,9 @@ use std::{
 };
 
 fn is_valid_page(next_pages: &[i32], needed_pages: Option<&Vec<i32>>) -> bool {
-    match needed_pages {
-        Some(pages) => {
-            if pages.iter().any(|page| next_pages.contains(page)) {
-                return false;
-            }
-
-            true
-        }
-        None => true,
-    }
+    needed_pages.map_or(true, |pages| {
+        !pages.iter().any(|page| next_pages.contains(page))
+    })
 }
 
 fn is_valid_update(update: &Vec<i32>, pages_order_map: &HashMap<i32, Vec<i32>>) -> bool {
