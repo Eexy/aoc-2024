@@ -25,6 +25,35 @@ fn is_valid_update(update: &Vec<i32>, pages_order_map: &HashMap<i32, Vec<i32>>) 
         .all(|(idx, page)| is_valid_page(&update[idx + 1..], pages_order_map.get(page)))
 }
 
+fn correct_update(mut update: Vec<i32>, pages_order_map: &HashMap<i32, Vec<i32>>) -> Vec<i32> {
+    while !is_valid_update(&update, pages_order_map) {
+        for idx in 0..update.len() {
+            let page = update[idx];
+            if !is_valid_page(&update[idx + 1..], pages_order_map.get(&page)) {
+                match pages_order_map.get(&page) {
+                    None => {}
+                    Some(needed_pages) => {
+                        let result = needed_pages
+                            .iter()
+                            .filter_map(|needed_pages| {
+                                update.iter().position(|x| x == needed_pages)
+                            })
+                            .max();
+
+                        if let Some(max_position) = result {
+                            update.swap(idx, max_position);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // dbg!(&update);
+
+    update
+}
+
 fn parse_pages_order(pages_order: Vec<String>) -> HashMap<i32, Vec<i32>> {
     let mut hashmap: HashMap<i32, Vec<i32>> = HashMap::new();
 
@@ -57,9 +86,6 @@ fn main() {
     };
 
     let reader = BufReader::new(file);
-    // let mut hashmap: HashMap<i32, Vec<i32>> = HashMap::new();
-    // let mut printed: HashMap<i32, bool> = HashMap::new();
-    // let mut total = 0;
     let (raw_pages_order, raw_updates): (Vec<String>, Vec<String>) = reader
         .lines()
         .filter_map(|line| line.ok())
@@ -77,11 +103,18 @@ fn main() {
         })
         .collect::<Vec<_>>();
 
-    let total: i32 = parsed_updates
+    // let valid_total: i32 = parsed_updates
+    //     .into_iter()
+    //     .filter(|update| is_valid_update(&update, &parsed_pages_order))
+    //     .map(|update| update[update.len() / 2])
+    //     .sum();
+
+    let invalid_total: i32 = parsed_updates
         .into_iter()
-        .filter(|update| is_valid_update(&update, &parsed_pages_order))
+        .filter(|update| !is_valid_update(&update, &parsed_pages_order))
+        .map(|update| correct_update(update, &parsed_pages_order))
         .map(|update| update[update.len() / 2])
         .sum();
 
-    dbg!(total);
+    dbg!(invalid_total);
 }
