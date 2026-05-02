@@ -221,7 +221,6 @@ fn main() {
             create_new_obstacle(&current_position, &initial_position, width, height);
 
         if let Some(new_obstacle) = possible_new_obstacle {
-            // print_map(&map, &new_obstacle, &current_position);
             let mut visited_positions: HashMap<(i32, i32, Direction), i32> = HashMap::new();
 
             let mut new_position = current_position.clone();
@@ -238,9 +237,6 @@ fn main() {
                     .map_or(true, |value| *value < 2)
                 && !already_tested_new_positions.contains(&(new_obstacle.0, new_obstacle.1))
             {
-                // if is_next_position_new_obstacle(&new_position, &new_obstacle) {
-                //     counter_visited_new_obstacle += 1;
-                // }
                 new_position = move_guard(&new_position, &new_obstacles_positions);
 
                 visited_positions
@@ -257,19 +253,10 @@ fn main() {
             }
 
             already_tested_new_positions.insert((new_obstacle.0, new_obstacle.1));
-
-            // if counter_visited_new_obstacle >= 4 {
-            //     loops += 1;
-            // }
         }
 
-        // map[current_position.y as usize][current_position.x as usize] = 'X';
         visited.insert((current_position.x, current_position.y));
-        dbg!(visited.len());
         current_position = move_guard(&current_position, &obstacles_positions);
-        // dbg!(&counter);
-        // dbg!(&current_position);
-        // counter += 1;
     }
 
     dbg!(visited.len());
