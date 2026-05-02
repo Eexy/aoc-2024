@@ -160,46 +160,6 @@ fn create_new_obstacle(
     }
 }
 
-fn is_next_position_new_obstacle(position: &Position, new_obstacle: &(i32, i32)) -> bool {
-    match position.dir {
-        Direction::Up => position.y - 1 == new_obstacle.1 && position.x == new_obstacle.0,
-        Direction::Down => position.y + 1 == new_obstacle.1 && position.x == new_obstacle.0,
-        Direction::Left => position.y == new_obstacle.1 && position.x - 1 == new_obstacle.0,
-        Direction::Right => position.y == new_obstacle.1 && position.x + 1 == new_obstacle.0,
-    }
-}
-
-fn print_position(direction: &Direction) -> char {
-    match direction {
-        Direction::Up => '^',
-        Direction::Down => 'v',
-        Direction::Left => '<',
-        Direction::Right => '>',
-    }
-}
-
-fn print_map(map: &Vec<Vec<char>>, new_obstacle: &(i32, i32), position: &Position) {
-    for (y, line) in map.iter().enumerate() {
-        println!(
-            "{}",
-            line.iter()
-                .enumerate()
-                .map(|(idx, ch)| {
-                    if idx as i32 == new_obstacle.0 && y as i32 == new_obstacle.1 {
-                        return '0';
-                    } else if idx as i32 == position.x && y as i32 == position.y {
-                        return print_position(&position.dir);
-                    }
-
-                    *ch
-                })
-                .collect::<String>()
-        );
-    }
-
-    println!("");
-}
-
 fn main() {
     let file = match File::open("input.txt") {
         Ok(f) => f,
