@@ -24,31 +24,31 @@ fn is_out(position: &Position, width: i32, height: i32) -> bool {
     position.x < 0 || position.x >= width || position.y < 0 || position.y >= height
 }
 
-fn is_obstacle_up(position: &Position, obstacles_positions: &Vec<(i32, i32)>) -> bool {
-    obstacles_positions.iter().any(|obstacle_position| {
-        obstacle_position.1 == position.y - 1 && position.x == obstacle_position.0
-    })
+fn is_obstacle_up(position: &Position, obstacles_positions: &HashSet<(i32, i32)>) -> bool {
+    obstacles_positions
+        .get(&(position.x, position.y - 1))
+        .is_some()
 }
 
-fn is_obstacle_down(position: &Position, obstacles_positions: &Vec<(i32, i32)>) -> bool {
-    obstacles_positions.iter().any(|obstacle_position| {
-        obstacle_position.1 == position.y + 1 && obstacle_position.0 == position.x
-    })
+fn is_obstacle_down(position: &Position, obstacles_positions: &HashSet<(i32, i32)>) -> bool {
+    obstacles_positions
+        .get(&(position.x, position.y + 1))
+        .is_some()
 }
 
-fn is_obstacle_right(position: &Position, obstacles_positions: &Vec<(i32, i32)>) -> bool {
-    obstacles_positions.iter().any(|obstacle_position| {
-        obstacle_position.0 == position.x + 1 && obstacle_position.1 == position.y
-    })
+fn is_obstacle_right(position: &Position, obstacles_positions: &HashSet<(i32, i32)>) -> bool {
+    obstacles_positions
+        .get(&(position.x + 1, position.y))
+        .is_some()
 }
 
-fn is_obstacle_left(position: &Position, obstacles_positions: &Vec<(i32, i32)>) -> bool {
-    obstacles_positions.iter().any(|obstacle_position| {
-        obstacle_position.0 == position.x - 1 && obstacle_position.1 == position.y
-    })
+fn is_obstacle_left(position: &Position, obstacles_positions: &HashSet<(i32, i32)>) -> bool {
+    obstacles_positions
+        .get(&(position.x - 1, position.y))
+        .is_some()
 }
 
-fn is_obstacle_next(position: &Position, obstacles_positions: &Vec<(i32, i32)>) -> bool {
+fn is_obstacle_next(position: &Position, obstacles_positions: &HashSet<(i32, i32)>) -> bool {
     match position.dir {
         Direction::Up => is_obstacle_up(position, obstacles_positions),
         Direction::Down => is_obstacle_down(position, obstacles_positions),
@@ -57,14 +57,7 @@ fn is_obstacle_next(position: &Position, obstacles_positions: &Vec<(i32, i32)>) 
     }
 }
 
-fn move_guard(position: &Position, obstacles_positions: &Vec<(i32, i32)>) -> Position {
-    // let is_obstacle_next = match position.dir {
-    //     Direction::Up => is_obstacle_up(position, obstacles_positions),
-    //     Direction::Down => is_obstacle_down(position, obstacles_positions),
-    //     Direction::Left => is_obstacle_left(position, obstacles_positions),
-    //     Direction::Right => is_obstacle_right(position, obstacles_positions),
-    // };
-
+fn move_guard(position: &Position, obstacles_positions: &HashSet<(i32, i32)>) -> Position {
     if is_obstacle_next(position, obstacles_positions) {
         return match position.dir {
             Direction::Up => Position {
@@ -191,7 +184,7 @@ fn main() {
         }
     });
 
-    let mut obstacles_positions = vec![];
+    let mut obstacles_positions: HashSet<(i32, i32)> = HashSet::new();
 
     for (y, line) in map.iter().enumerate() {
         for (x, &ch) in line.iter().enumerate() {
@@ -201,7 +194,7 @@ fn main() {
                     current_position.y = y as i32;
                 }
                 '#' => {
-                    obstacles_positions.push((x as i32, y as i32));
+                    obstacles_positions.insert((x as i32, y as i32));
                 }
                 _ => {}
             }
@@ -229,7 +222,7 @@ fn main() {
                 .and_modify(|v| *v += 1)
                 .or_default();
             let mut new_obstacles_positions = obstacles_positions.clone();
-            new_obstacles_positions.push(new_obstacle);
+            new_obstacles_positions.insert(new_obstacle);
 
             while !is_out(&new_position, width, height)
                 && visited_positions
