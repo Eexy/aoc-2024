@@ -1,5 +1,5 @@
 use std::{
-    collections::{HashMap, HashSet},
+    collections::HashSet,
     fs::File,
     io::{BufRead, BufReader},
     process,
@@ -13,7 +13,7 @@ enum Direction {
     Left,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 struct Position {
     x: i32,
     y: i32,
@@ -107,61 +107,6 @@ fn move_guard(position: &Position, obstacles_positions: &HashSet<(i32, i32)>) ->
     }
 }
 
-fn is_inital_position(position: &Position, initial_position: &Position) -> bool {
-    position.x == initial_position.x && position.y == initial_position.y
-}
-
-fn is_position_visited_twice(
-    position: &Position,
-    visited_positions: &HashMap<(i32, i32, Direction), i32>,
-) -> bool {
-    visited_positions
-        .get(&(position.x, position.y, position.dir.clone()))
-        .map_or(false, |value| *value >= 2)
-}
-
-fn create_new_obstacle(
-    position: &Position,
-    initial_position: &Position,
-    width: i32,
-    height: i32,
-) -> Option<(i32, i32)> {
-    if is_inital_position(position, initial_position) {
-        return None;
-    }
-
-    match position.dir {
-        Direction::Up => {
-            if position.y - 1 < 0 {
-                return None;
-            }
-
-            Some((position.x, position.y - 1))
-        }
-        Direction::Down => {
-            if position.y + 1 == height {
-                return None;
-            }
-            Some((position.x, position.y + 1))
-        }
-        Direction::Left => {
-            if position.x - 1 < 0 {
-                return None;
-            }
-
-            Some((position.x - 1, position.y))
-        }
-
-        Direction::Right => {
-            if position.x + 1 == width {
-                return None;
-            }
-
-            Some((position.x + 1, position.y))
-        }
-    }
-}
-
 fn main() {
     let file = match File::open("input.txt") {
         Ok(f) => f,
@@ -172,18 +117,18 @@ fn main() {
     };
 
     let reader = BufReader::new(file);
-    let mut map = reader
+    let map = reader
         .lines()
         .filter_map(|line| line.ok())
         .filter(|line| !line.is_empty())
         .map(|line| line.chars().collect::<Vec<_>>())
         .collect::<Vec<_>>();
+
     let mut current_position = Position {
         x: 0,
         y: 0,
         dir: Direction::Up,
     };
-    let initial_position = current_position.clone();
 
     map.iter().enumerate().for_each(|(idx, line)| {
         let result = line.iter().position(|&x| x == '^');
@@ -192,6 +137,7 @@ fn main() {
             current_position.y = idx as i32;
         }
     });
+    let initial_position = current_position.clone();
 
     let mut obstacles_positions: HashSet<(i32, i32)> = HashSet::new();
 
@@ -210,55 +156,76 @@ fn main() {
         }
     }
 
-    let mut visited: HashSet<(i32, i32)> = HashSet::new();
-    let mut already_tested_new_positions: HashSet<(i32, i32)> = HashSet::new();
-    visited.insert((current_position.x, current_position.y));
+    let mut visited: Vec<Position> = vec![];
 
     let height = map.len() as i32;
     let width = map.last().map_or(0, |line| line.len() as i32);
-    let mut loops = 0;
 
     while !is_out(&current_position, width, height) {
-        let possible_new_obstacle =
-            create_new_obstacle(&current_position, &initial_position, width, height);
-
-        if let Some(new_obstacle) = possible_new_obstacle {
-            let mut visited_positions: HashMap<(i32, i32, Direction), i32> = HashMap::new();
-
-            let mut new_position = current_position.clone();
-            visited_positions
-                .entry((new_position.x, new_position.y, new_position.dir.clone()))
-                .and_modify(|v| *v += 1)
-                .or_default();
-            let mut new_obstacles_positions = obstacles_positions.clone();
-            new_obstacles_positions.insert(new_obstacle);
-
-            while !is_out(&new_position, width, height)
-                && !is_position_visited_twice(&new_position, &visited_positions)
-                && !already_tested_new_positions.contains(&(new_obstacle.0, new_obstacle.1))
-            {
-                new_position = move_guard(&new_position, &new_obstacles_positions);
-
-                visited_positions
-                    .entry((new_position.x, new_position.y, new_position.dir.clone()))
-                    .and_modify(|v| *v += 1)
-                    .or_default();
-
-                if visited_positions
-                    .get(&(new_position.x, new_position.y, new_position.dir.clone()))
-                    .is_some_and(|v| *v >= 2)
-                {
-                    loops += 1;
-                }
-            }
-
-            already_tested_new_positions.insert((new_obstacle.0, new_obstacle.1));
-        }
-
-        visited.insert((current_position.x, current_position.y));
-        current_position = move_guard(&current_position, &obstacles_positions);
+        let next = move_guard(&current_position, &obstacles_positions);
+        visited.push(current_position);
+        current_position = next;
     }
 
-    dbg!(visited.len());
+    let mut new_obstacle_tested_positions: HashSet<(i32, i32)> = HashSet::new();
+
+    let mut loops = 0;
+    for position in visited.iter() {
+        let next = move_guard(position, &obstacles_positions);
+
+        let new_obstacle = (next.x, next.y);
+
+        // Check if next position is in the map
+        if is_out(&next, width, height) {
+            continue;
+        };
+
+        // Check if the new obstacle is not at the position of already existing obstacle
+        if obstacles_positions.contains(&new_obstacle) {
+            continue;
+        }
+
+        // Check if the new obstacle is not placed at the initial position
+        if new_obstacle == (initial_position.x, initial_position.y) {
+            continue;
+        }
+
+        // Check that we don't test a new obstacle position twice
+        if new_obstacle_tested_positions.contains(&new_obstacle) {
+            continue;
+        }
+
+        let mut new_position = position.clone();
+        let mut temp_positions: HashSet<Position> = HashSet::from([]);
+
+        obstacles_positions.insert(new_obstacle);
+
+        let is_loop = loop {
+            if is_out(&new_position, width, height) {
+                break false;
+            };
+            if temp_positions.contains(&new_position) {
+                break true;
+            };
+            let next_position = move_guard(&new_position, &obstacles_positions);
+            temp_positions.insert(new_position);
+            new_position = next_position;
+        };
+
+        if is_loop {
+            loops += 1;
+        }
+
+        obstacles_positions.remove(&new_obstacle);
+        new_obstacle_tested_positions.insert(new_obstacle);
+    }
+
+    dbg!(
+        visited
+            .iter()
+            .map(|p| (p.x, p.y))
+            .collect::<HashSet<_>>()
+            .len()
+    );
     dbg!(loops);
 }
