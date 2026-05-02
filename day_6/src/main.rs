@@ -111,6 +111,15 @@ fn is_inital_position(position: &Position, initial_position: &Position) -> bool 
     position.x == initial_position.x && position.y == initial_position.y
 }
 
+fn is_position_visited_twice(
+    position: &Position,
+    visited_positions: &HashMap<(i32, i32, Direction), i32>,
+) -> bool {
+    visited_positions
+        .get(&(position.x, position.y, position.dir.clone()))
+        .map_or(false, |value| *value >= 2)
+}
+
 fn create_new_obstacle(
     position: &Position,
     initial_position: &Position,
@@ -225,9 +234,7 @@ fn main() {
             new_obstacles_positions.insert(new_obstacle);
 
             while !is_out(&new_position, width, height)
-                && visited_positions
-                    .get(&(new_position.x, new_position.y, new_position.dir.clone()))
-                    .map_or(true, |value| *value < 2)
+                && !is_position_visited_twice(&new_position, &visited_positions)
                 && !already_tested_new_positions.contains(&(new_obstacle.0, new_obstacle.1))
             {
                 new_position = move_guard(&new_position, &new_obstacles_positions);
