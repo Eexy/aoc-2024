@@ -32,35 +32,47 @@ fn is_valid_line(line: &(i64, Vec<i64>)) -> bool {
     }
 
     // generate all possible combination of operator
-    let combinations: Vec<Vec<char>> = generate_combination(vec![vec![]], 0, line.1.len() - 1);
+    // let combinations: Vec<Vec<char>> = generate_combination(vec![vec![]], 0, line.1.len() - 1);
 
-    let mut is_valid = false;
+    // number of operator slots between the numbers
+    let n_operator = line.1.len() as u32 - 1;
+    // each slot has 3 choices (+, *, |), so total combinations is 3^n
+    let n_combinations = 3_i64.pow(n_operator);
 
-    for combination in combinations {
+    // each integer i from 0..n_combinations encodes one full operator sequence
+    // its base-3 digits map to operators: 0→+, 1→*, 2→|
+    for i in 0..n_combinations {
         let mut temp = line.1[0];
 
-        for idx in 0..combination.len() {
+        for idx in 0..n_operator as usize {
             let next_operand = line.1[idx + 1];
-            if combination[idx] == '+' {
-                temp += next_operand;
-            } else if combination[idx] == '*' {
-                temp *= next_operand;
-            } else {
-                let str = format!("{}{}", temp, next_operand);
-                temp = match str.parse::<i64>().ok() {
-                    Some(v) => v,
-                    None => 0,
+            // extract the operator at position idx by shifting right in base-3
+            // e.g. i=5 (base-3: 0,1,2) with 3 operator slots:
+            //   idx=0: (5 / 3^0) % 3 = (5 / 1) % 3 = 5 % 3 = 2 → |
+            //   idx=1: (5 / 3^1) % 3 = (5 / 3) % 3 = 1 % 3 = 1 → *
+            //   idx=2: (5 / 3^2) % 3 = (5 / 9) % 3 = 0 % 3 = 0 → +
+            // dividing by 3^idx shifts the base-3 digits right so the digit
+            // at position idx lands at the units place, then % 3 isolates it
+            match (i / 3_i64.pow(idx as u32)) % 3 {
+                0 => temp += next_operand,
+                1 => temp *= next_operand,
+                2 => {
+                    let str = format!("{}{}", temp, next_operand);
+                    temp = match str.parse::<i64>().ok() {
+                        Some(v) => v,
+                        None => 0,
+                    };
                 }
-            }
+                _ => unreachable!(),
+            };
         }
 
         if temp == line.0 {
-            is_valid = true;
-            break;
+            return true;
         }
     }
 
-    is_valid
+    false
 }
 
 fn main() {
