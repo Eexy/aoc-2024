@@ -28,7 +28,7 @@ fn is_valid_line(line: &(i64, Vec<i64>)) -> bool {
 
     // when there is only one number we check that is equal to the goal if not we continue
     if line.1.len() == 1 && line.0 != line.1[0] {
-        false;
+        return false;
     }
 
     // generate all possible combination of operator
