@@ -65,6 +65,10 @@ fn is_valid_line(line: &(i64, Vec<i64>)) -> bool {
                 }
                 _ => unreachable!(),
             };
+
+            if temp > line.0 {
+                break;
+            }
         }
 
         if temp == line.0 {
