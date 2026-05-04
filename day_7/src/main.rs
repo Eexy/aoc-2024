@@ -37,14 +37,14 @@ fn is_valid_line(line: &(i64, Vec<i64>)) -> bool {
     let mut is_valid = false;
 
     for combination in combinations {
-        let mut temp = line.1[0] as i64;
+        let mut temp = line.1[0];
 
         // let mut temp_values: Vec<i64> = vec![];
         for idx in 0..combination.len() {
             if combination[idx] == '+' {
-                temp += line.1[idx + 1] as i64;
+                temp += line.1[idx + 1];
             } else if combination[idx] == '*' {
-                temp *= line.1[idx + 1] as i64;
+                temp *= line.1[idx + 1];
             } else {
                 let str = format!("{}{}", temp, line.1[idx + 1]);
                 temp = match str.parse::<i64>().ok() {
