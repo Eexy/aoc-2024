@@ -1,8 +1,14 @@
 use std::{
-    collections::HashMap,
     fs::File,
     io::{BufRead, BufReader},
 };
+
+#[derive(Debug)]
+struct Span {
+    value: Option<i32>,
+    start: usize,
+    len: usize,
+}
 
 fn main() -> Result<(), String> {
     let file = File::open("input.txt").map_err(|err| format!("failed to open input.txt: {err}"))?;
@@ -12,76 +18,65 @@ fn main() -> Result<(), String> {
         .flatten()
         .next()
         .ok_or("unable to read first line")?;
-    let chars = line.chars();
 
     let mut block_id = 0;
-    let mut filled_block: HashMap<i32, (i32, i32)> = HashMap::new();
-    let mut empty_blocks: Vec<(i32, i32)> = vec![];
+    let mut filled_blocks: Vec<Span> = vec![];
+    let mut empty_blocks: Vec<Span> = vec![];
 
-    let mut pos = 0;
+    let mut pos: usize = 0;
 
-    let mut collected = chars
-        .into_iter()
-        .map(|ch| ch as i32 - ('0' as i32))
-        .enumerate()
-        .flat_map(|(idx, ch)| {
-            let iter = if idx % 2 == 0 {
-                std::iter::repeat_n(Some(block_id), ch as usize)
-            } else {
-                std::iter::repeat_n(None, ch as usize)
-            };
+    for (idx, ch) in line.chars().enumerate() {
+        let len = ch
+            .to_digit(10)
+            .ok_or_else(|| format!("invalid digit '{ch}' at postition '{idx}'"))?
+            as usize;
 
-            if idx % 2 == 0 {
-                filled_block.insert(block_id, (pos, ch as i32));
-                block_id += 1;
-            } else {
-                empty_blocks.push((pos, ch as i32));
-            }
-
-            pos += ch;
-            iter
-        })
-        .collect::<Vec<_>>();
-
-    while block_id != 0 {
-        match filled_block.get(&block_id) {
-            Some(block) => {
-                let position_empty_blocks = empty_blocks
-                    .iter_mut()
-                    .find(|empty_block| empty_block.0 < block.0 && empty_block.1 >= block.1);
-
-                if let Some(empty_block) = position_empty_blocks {
-                    // swap slice
-                    collected.splice(
-                        empty_block.0 as usize..(empty_block.0 + block.1) as usize,
-                        std::iter::repeat_n(Some(block_id), block.1 as usize),
-                    );
-
-                    collected.splice(
-                        block.0 as usize..(block.0 + block.1) as usize,
-                        std::iter::repeat_n(None, block.1 as usize),
-                    );
-
-                    // fill empty block
-                    empty_block.0 += block.1;
-                    empty_block.1 -= block.1;
-
-                    // create new empty block where filled block where
-                    empty_blocks.push((block.0, block.1));
-
-                    // fill vector
-                }
-            }
-            None => {}
+        if idx % 2 == 0 {
+            filled_blocks.push(Span {
+                value: Some(block_id),
+                start: pos,
+                len,
+            });
+            block_id += 1;
+        } else if len > 0 {
+            empty_blocks.push(Span {
+                value: None,
+                start: pos,
+                len,
+            });
         }
-        block_id -= 1;
+
+        pos += len;
     }
 
-    let result = collected
-        .into_iter()
-        .flat_map(|val| val.or(Some(0)))
-        .enumerate()
-        .fold(0 as i64, |acc, (idx, val)| acc + (idx as i32 * val) as i64);
+    let mut collected: Vec<Span> = vec![];
+    while let Some(mut block) = filled_blocks.pop() {
+        let possible_empty_block = empty_blocks
+            .iter_mut()
+            .find(|empty_block| empty_block.start < block.start && empty_block.len >= block.len);
+
+        if let Some(empty_block) = possible_empty_block {
+            let empty_block_start = empty_block.start;
+            empty_block.start += block.len;
+            empty_block.len -= block.len;
+
+            empty_blocks.push(Span {
+                value: None,
+                start: block.start,
+                len: block.len,
+            });
+
+            block.start = empty_block_start;
+        }
+
+        collected.push(block);
+    }
+
+    let result = collected.into_iter().fold(0 as i64, |acc, block| {
+        acc + block.value.map_or(0i64, |val| {
+            val as i64 * block.len as i64 * (2 * block.start as i64 + block.len as i64 - 1) / 2
+        })
+    });
 
     dbg!(result);
 
