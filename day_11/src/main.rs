@@ -1,4 +1,5 @@
 use std::{
+    collections::HashMap,
     fs::File,
     io::{BufRead, BufReader},
 };
@@ -8,39 +9,52 @@ fn extract_leading_zeroes(slice: &str) -> String {
         "" => "0".to_string(),
         rest => rest.to_string(),
     }
-    // match stone.chars().position(|ch| ch != '0') {
-    //     None => "0".to_string(),
-    //     Some(val) => stone[val..].to_string(),
-    // }
 }
 
-fn split_stones(stones: Vec<String>, current_blink: usize, max_blink: usize) -> Vec<String> {
+fn split_stones(
+    stones: HashMap<String, i64>,
+    current_blink: usize,
+    max_blink: usize,
+) -> HashMap<String, i64> {
     if current_blink == max_blink {
         return stones;
     }
 
-    let new_stones = stones
-        .into_iter()
-        .flat_map(|stone| {
-            if stone == "0".to_string() {
-                return vec!["1".to_string()];
-            }
+    let mut new_stones: HashMap<String, i64> = HashMap::new();
 
-            if stone.len() % 2 == 0 {
-                let mid = stone.len() / 2;
-                let rslice = extract_leading_zeroes(&stone[0..mid]);
-                let lslice = extract_leading_zeroes(&stone[mid..]);
+    for (entry, val) in stones.into_iter() {
+        if val == 0 {
+            continue;
+        }
 
-                return vec![rslice, lslice];
-            }
+        if entry == "0" {
+            new_stones
+                .entry("1".to_string())
+                .and_modify(|e| *e += val)
+                .or_insert(val);
+        } else if entry.len() % 2 == 0 {
+            let mid = entry.len() / 2;
+            let lslice = extract_leading_zeroes(&entry[0..mid]);
+            let rslice = extract_leading_zeroes(&entry[mid..]);
 
-            vec![
-                stone
-                    .parse::<i64>()
-                    .map_or(0.to_string(), |v| (v * 2024).to_string()),
-            ]
-        })
-        .collect::<Vec<_>>();
+            new_stones
+                .entry(lslice)
+                .and_modify(|e| *e += val)
+                .or_insert(val);
+            new_stones
+                .entry(rslice)
+                .and_modify(|e| *e += val)
+                .or_insert(val);
+        } else {
+            let new_entry = entry
+                .parse::<i64>()
+                .map_or(0.to_string(), |v| (v * 2024).to_string());
+            new_stones
+                .entry(new_entry)
+                .and_modify(|e| *e += val)
+                .or_insert(val);
+        }
+    }
 
     split_stones(new_stones, current_blink + 1, max_blink)
 }
@@ -57,10 +71,15 @@ fn main() -> Result<(), String> {
         .map(|value| value.to_string())
         .collect::<Vec<_>>();
 
-    dbg!(&stones);
+    let mut stones_hashmap: HashMap<String, i64> = HashMap::new();
+    for stone in stones.into_iter() {
+        stones_hashmap
+            .entry(stone)
+            .and_modify(|val| *val += 1)
+            .or_insert(1);
+    }
 
-    let result_stones = split_stones(stones, 0, 25);
-    dbg!(result_stones.len());
-
+    let result_stones = split_stones(stones_hashmap, 0, 75);
+    dbg!(result_stones.into_values().fold(0i64, |acc, val| acc + val));
     Ok(())
 }
